@@ -117,8 +117,6 @@
         .result-detail { font-size: 13px; line-height: 1.9; }
         .result-detail .error { color: var(--clr-error); }
 
-
-
         @media (max-width: 500px) {
             body { padding: 12px 10px; }
             .inputs-grid { grid-template-columns: 1fr; gap: 16px; }
@@ -185,7 +183,6 @@
                     </div>
                 </div>
             </div>
-
         </div>
 
         <div class="result-card" id="result">
@@ -199,39 +196,32 @@
  * SCHATZL Winkelrechner v1.0.0
  * Rechtwinkliges Dreieck — Seiten- und Winkelberechnung
  *
- * Copyright (c) 2025, SCHATZL Fine Furniture
- * All rights reserved.
+ * Copyright (c) 2025, SCHATZL Fine Furniture — All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
- *
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
- * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
- * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
- * THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. IN NO EVENT
+ * SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY.
  */
+
+// ============================================================
+// Constants & State
+// ============================================================
 const DEG = Math.PI / 180;
 const RAD = 180 / Math.PI;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const VW = 400, VH = 300;
+const MAX_SIDE = 99999; // mm
 
 let userFields = [];
 let debounceTimer = null;
-let rotation = 0;   // 0..3 → 0°, 90°, 180°, 270° CW
+let rotation = 0;   // 0..3 → 0°/90°/180°/270° CW
 let mirrored = false;
 
 const els = {
@@ -244,72 +234,34 @@ const els = {
 
 // ============================================================
 // Geometry
-//
 // Right triangle with γ=90° at C.
-// Classical: a opposite α, b opposite β, c = hypotenuse.
-//
-// Base layout (rotation=0, mirrored=false):
-//   C = top-left  (90°)
-//   A = bottom-left (α=30°)
-//   B = top-right   (β=60°)
-//
-//   side b = C–A (vertical, Ankathete, opposite β=60°) → long
-//   side a = C–B (horizontal, Gegenkathete, opposite α=30°) → short
-//   side c = A–B (diagonal, Hypotenuse)
-//
-//   Wait — that gives: a opposite α=30° is the short side,
-//   b opposite β=60° is the long side. For a 30-60-90:
-//   short (opp 30°) = 1, long (opp 60°) = √3, hyp = 2.
-//   So vertical C–A = √3, horizontal C–B = 1.
-//   That's a tall, narrow triangle. Good.
-//
-// Actually for a more useful visual I'll swap: α=60° bottom-left, β=30° top-right.
-// Then a (opp 60°) = √3 = long = horizontal C–B
-// and b (opp 30°) = 1 = short = vertical C–A.
-// This gives a wider triangle. Let me just pick what looks good:
-//
-// Final: tall triangle.
-//   C top-left (90°), A bottom-left (α), B top-right (β)
-//   vertical leg C→A = long, horizontal leg C→B = short
-//   α at A: angle between leg A–C (up) and hypotenuse A–B (up-right)
-//     tan(α) = opposite/adjacent = CB / CA = short/long = 1/√3 → α=30°
-//   β at B: tan(β) = CA/CB = √3/1 → β=60°
-//
-//   side a opposite α(30°) = C–B (horizontal, short) = Gegenkathete
-//   side b opposite β(60°) = C–A (vertical, long) = Ankathete
-//   side c = A–B = Hypotenuse
+//   C = top-left  (90°),  A = bottom-left (α),  B = top-right (β)
+//   side a (Gegenkathete) = C–B (horizontal)
+//   side b (Ankathete)    = C–A (vertical)
+//   side c (Hypotenuse)   = A–B (diagonal)
 // ============================================================
-
 function getBaseCorners() {
     const pad = 65;
-    const maxW = VW - 2*pad;
-    const maxH = VH - 2*pad;
-
-    const hLeg = 1;             // horizontal (short, a)
-    const vLeg = Math.sqrt(3);  // vertical (long, b)
-
-    const scale = Math.min(maxW / hLeg, maxH / vLeg);
-    const w = hLeg * scale;
-    const h = vLeg * scale;
-
+    const maxW = VW - 2 * pad;
+    const maxH = VH - 2 * pad;
+    const scale = Math.min(maxW / 1, maxH / Math.sqrt(3));
+    const w = scale;
+    const h = Math.sqrt(3) * scale;
     const ox = pad + (maxW - w) / 2;
     const oy = pad + (maxH - h) / 2;
-
     return {
-        C: [ox,     oy],       // top-left, 90°
-        A: [ox,     oy + h],   // bottom-left, α=30°
-        B: [ox + w, oy],       // top-right, β=60°
+        C: [ox,     oy],
+        A: [ox,     oy + h],
+        B: [ox + w, oy],
     };
 }
 
 function applyTransform(pt) {
     let [x, y] = pt;
-    const cx = VW/2, cy = VH/2;
-
-    if (mirrored) x = 2*cx - x;
-
+    const cx = VW / 2, cy = VH / 2;
+    if (mirrored) x = 2 * cx - x;
     for (let i = 0; i < rotation; i++) {
-        const dx = x-cx, dy = y-cy;
+        const dx = x - cx, dy = y - cy;
         x = cx + dy;
         y = cy - dx;
     }
@@ -321,42 +273,34 @@ function applyTransform(pt) {
 // ============================================================
 function svgEl(parent, tag, attrs) {
     const el = document.createElementNS(SVG_NS, tag);
-    for (const [k,v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
     parent.appendChild(el);
     return el;
 }
 
 function vNorm(dx, dy) {
     const l = Math.hypot(dx, dy);
-    return l > 0 ? [dx/l, dy/l] : [0,0];
+    return l > 0 ? [dx / l, dy / l] : [0, 0];
 }
 
 function drawTriangle() {
     const svg = document.getElementById('triangleSvg');
     svg.innerHTML = '';
-
     const base = getBaseCorners();
     const C = applyTransform(base.C);
     const A = applyTransform(base.A);
     const B = applyTransform(base.B);
+    const centroid = [(C[0] + A[0] + B[0]) / 3, (C[1] + A[1] + B[1]) / 3];
 
-    const centroid = [(C[0]+A[0]+B[0])/3, (C[1]+A[1]+B[1])/3];
-
-    // Triangle outline only
     svgEl(svg, 'polygon', {
         points: `${C[0]},${C[1]} ${A[0]},${A[1]} ${B[0]},${B[1]}`,
         fill: 'none', stroke: 'var(--clr-tri-stroke)',
         'stroke-width': '1.5', 'stroke-linejoin': 'round',
     });
 
-    // Right angle at C
     drawRightAngle(svg, C, A, B);
-
-    // Angle arcs
     drawAngleArc(svg, A, B, C, 'α');
     drawAngleArc(svg, B, A, C, 'β');
-
-    // Side labels — parallel to each side, offset outward
     drawSideLabel(svg, C, B, 'a · Gegenkathete', centroid);
     drawSideLabel(svg, C, A, 'b · Ankathete', centroid);
     drawSideLabel(svg, A, B, 'c · Hypotenuse', centroid);
@@ -364,70 +308,54 @@ function drawTriangle() {
 
 function drawRightAngle(svg, C, A, B) {
     const r = 14;
-    const dA = vNorm(A[0]-C[0], A[1]-C[1]);
-    const dB = vNorm(B[0]-C[0], B[1]-C[1]);
-
-    const start = [C[0]+dA[0]*r, C[1]+dA[1]*r];
-    const end   = [C[0]+dB[0]*r, C[1]+dB[1]*r];
-
-    // Sweep: quarter circle from leg A to leg B
-    const cross = dA[0]*dB[1] - dA[1]*dB[0];
-    const sweep = cross > 0 ? 1 : 0;
-
+    const dA = vNorm(A[0] - C[0], A[1] - C[1]);
+    const dB = vNorm(B[0] - C[0], B[1] - C[1]);
+    const start = [C[0] + dA[0] * r, C[1] + dA[1] * r];
+    const end   = [C[0] + dB[0] * r, C[1] + dB[1] * r];
+    const sweep = (dA[0] * dB[1] - dA[1] * dB[0]) > 0 ? 1 : 0;
     svgEl(svg, 'path', {
         d: `M ${start[0]},${start[1]} A ${r},${r} 0 0,${sweep} ${end[0]},${end[1]}`,
         fill: 'none', stroke: 'var(--clr-tri-stroke)', 'stroke-width': '1',
     });
-
-    // Dot at bisector of the quarter circle (45° between legs)
-    const mid = vNorm(dA[0]+dB[0], dA[1]+dB[1]);
+    const mid = vNorm(dA[0] + dB[0], dA[1] + dB[1]);
     svgEl(svg, 'circle', {
-        cx: C[0]+mid[0]*r*0.55, cy: C[1]+mid[1]*r*0.55,
+        cx: C[0] + mid[0] * r * 0.55, cy: C[1] + mid[1] * r * 0.55,
         r: '1.5', fill: 'var(--clr-tri-stroke)',
     });
 }
 
 function drawAngleArc(svg, V, P1, P2, label) {
     const r = 28;
-    const d1 = vNorm(P1[0]-V[0], P1[1]-V[1]);
-    const d2 = vNorm(P2[0]-V[0], P2[1]-V[1]);
-
-    const s = [V[0]+d1[0]*r, V[1]+d1[1]*r];
-    const e = [V[0]+d2[0]*r, V[1]+d2[1]*r];
-    const cross = d1[0]*d2[1] - d1[1]*d2[0];
-
+    const d1 = vNorm(P1[0] - V[0], P1[1] - V[1]);
+    const d2 = vNorm(P2[0] - V[0], P2[1] - V[1]);
+    const s = [V[0] + d1[0] * r, V[1] + d1[1] * r];
+    const e = [V[0] + d2[0] * r, V[1] + d2[1] * r];
+    const cross = d1[0] * d2[1] - d1[1] * d2[0];
     svgEl(svg, 'path', {
-        d: `M ${s[0]},${s[1]} A ${r},${r} 0 0,${cross>0?1:0} ${e[0]},${e[1]}`,
+        d: `M ${s[0]},${s[1]} A ${r},${r} 0 0,${cross > 0 ? 1 : 0} ${e[0]},${e[1]}`,
         fill: 'none', stroke: 'var(--clr-tri-stroke)', 'stroke-width': '1',
     });
-
-    const mid = vNorm((d1[0]+d2[0])/2, (d1[1]+d2[1])/2);
+    const mid = vNorm((d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2);
     const lr = r + 13;
     svgEl(svg, 'text', {
-        x: V[0]+mid[0]*lr, y: V[1]+mid[1]*lr,
+        x: V[0] + mid[0] * lr, y: V[1] + mid[1] * lr,
         'text-anchor': 'middle', 'dominant-baseline': 'central',
         'font-size': '13', fill: 'var(--clr-text)',
     }).textContent = label;
 }
 
 function drawSideLabel(svg, P1, P2, label, centroid) {
-    const mx = (P1[0]+P2[0])/2, my = (P1[1]+P2[1])/2;
-    const dx = P2[0]-P1[0], dy = P2[1]-P1[1];
+    const mx = (P1[0] + P2[0]) / 2, my = (P1[1] + P2[1]) / 2;
+    const dx = P2[0] - P1[0], dy = P2[1] - P1[1];
     const len = Math.hypot(dx, dy);
-
-    // Perpendicular outward from centroid
-    let nx = -dy/len, ny = dx/len;
-    const toC = [centroid[0]-mx, centroid[1]-my];
-    if (nx*toC[0]+ny*toC[1] > 0) { nx=-nx; ny=-ny; }
-
+    let nx = -dy / len, ny = dx / len;
+    const toC = [centroid[0] - mx, centroid[1] - my];
+    if (nx * toC[0] + ny * toC[1] > 0) { nx = -nx; ny = -ny; }
     const off = 22;
-    const lx = mx+nx*off, ly = my+ny*off;
-
-    // Angle for parallel text
+    const lx = mx + nx * off, ly = my + ny * off;
     let angle = Math.atan2(dy, dx) * RAD;
-    if (angle > 90) angle -= 180;
+    if (angle > 90)  angle -= 180;
     if (angle < -90) angle += 180;
-
     svgEl(svg, 'text', {
         x: lx, y: ly,
         'text-anchor': 'middle', 'dominant-baseline': 'central',
@@ -443,7 +371,7 @@ function mirrorTriangle() { mirrored = !mirrored; drawTriangle(); }
 function rotateTriangle() { rotation = (rotation + 1) % 4; drawTriangle(); }
 
 // ============================================================
-// Calculation
+// Input Handling
 // ============================================================
 function trackField(key) {
     userFields = userFields.filter(k => k !== key);
@@ -464,26 +392,17 @@ function onFieldInput(changedKey) {
     debounceTimer = setTimeout(recalculate, 500);
 }
 
-// --------------------------------------------------------
-// Limits
-// --------------------------------------------------------
-const MAX_SIDE = 99999;   // mm
+// ============================================================
+// Validation
+// ============================================================
+function fmt(v) { return v.toLocaleString('de-DE', { maximumFractionDigits: 2 }); }
 
-// --------------------------------------------------------
-// Format helper
-// --------------------------------------------------------
-function fmt(v) { return v.toLocaleString('de-DE', {maximumFractionDigits: 2}); }
-
-// --------------------------------------------------------
-// Pre-validation: returns error string or null if OK
-// --------------------------------------------------------
 function validate(k1, v1, k2, v2) {
-    const sides = ['a','b','c'];
-    const angles = ['alpha','beta'];
-    const L = {a:'Seite a', b:'Seite b', c:'Hypotenuse c', alpha:'Winkel α', beta:'Winkel β'};
+    const sides  = ['a', 'b', 'c'];
+    const angles = ['alpha', 'beta'];
+    const L = { a: 'Seite a', b: 'Seite b', c: 'Hypotenuse c', alpha: 'Winkel α', beta: 'Winkel β' };
 
-    // --- Individual range checks ---
-    for (const [k,v] of [[k1,v1],[k2,v2]]) {
+    for (const [k, v] of [[k1, v1], [k2, v2]]) {
         if (sides.includes(k)) {
             if (v <= 0)
                 return `${L[k]}: Wert muss größer als 0 sein (eingegeben: ${fmt(v)} mm).`;
@@ -498,63 +417,48 @@ function validate(k1, v1, k2, v2) {
         }
     }
 
-    // --- Cross-field checks ---
-
-    // Two angles
     if (angles.includes(k1) && angles.includes(k2)) {
         const sum = v1 + v2;
         if (Math.abs(sum - 90) > 0.1) {
             const diff = 90 - sum;
             return `α + β = ${fmt(sum)}° — muss exakt 90° ergeben (Differenz: ${fmt(Math.abs(diff))}°). `
-                 + `Bei α = ${fmt(v1)}° wäre β = ${fmt(90-v1)}° erforderlich.`;
+                 + `Bei α = ${fmt(v1)}° wäre β = ${fmt(90 - v1)}° erforderlich.`;
         }
     }
 
-    // Hypotenuse vs. cathetus
     const vals = {}; vals[k1] = v1; vals[k2] = v2;
-    if (vals.c != null && vals.a != null && vals.c <= vals.a) {
+    if (vals.c != null && vals.a != null && vals.c <= vals.a)
         return `Hypotenuse c (${fmt(vals.c)} mm) muss größer sein als Seite a (${fmt(vals.a)} mm). `
              + `Mindestwert für c: > ${fmt(vals.a)} mm.`;
-    }
-    if (vals.c != null && vals.b != null && vals.c <= vals.b) {
+    if (vals.c != null && vals.b != null && vals.c <= vals.b)
         return `Hypotenuse c (${fmt(vals.c)} mm) muss größer sein als Seite b (${fmt(vals.b)} mm). `
              + `Mindestwert für c: > ${fmt(vals.b)} mm.`;
-    }
 
-    // Side + angle: check if resulting sides would exceed max
     if (sides.includes(k1) !== sides.includes(k2)) {
         const sKey = sides.includes(k1) ? k1 : k2;
         const aKey = sides.includes(k1) ? k2 : k1;
         const sVal = sides.includes(k1) ? v1 : v2;
         const aVal = sides.includes(k1) ? v2 : v1;
-
-        // Estimate largest possible result (hypotenuse) to warn early
         let estMax = null;
         if (sKey === 'a' && aKey === 'alpha') estMax = sVal / Math.sin(aVal * DEG);
         if (sKey === 'b' && aKey === 'alpha') estMax = sVal / Math.cos(aVal * DEG);
         if (sKey === 'a' && aKey === 'beta')  estMax = sVal / Math.cos(aVal * DEG);
         if (sKey === 'b' && aKey === 'beta')  estMax = sVal / Math.sin(aVal * DEG);
-        if (sKey === 'c') estMax = sVal; // c is already the largest
-
-        if (estMax != null && estMax > MAX_SIDE) {
+        if (sKey === 'c') estMax = sVal;
+        if (estMax != null && estMax > MAX_SIDE)
             return `Kombination ergibt Seitenlängen über ${fmt(MAX_SIDE)} mm. `
                  + `Bei ${L[sKey]} = ${fmt(sVal)} mm und ${L[aKey]} = ${fmt(aVal)}° `
                  + `wird die Hypotenuse ca. ${fmt(estMax)} mm. Bitte Werte verringern.`;
-        }
     }
 
     return null;
 }
 
-// --------------------------------------------------------
-// Post-validation: check computed results
-// --------------------------------------------------------
 function postValidate(sol) {
     if (!sol) return 'Berechnung nicht möglich — die Kombination der Eingabewerte ergibt kein gültiges rechtwinkliges Dreieck.';
+    const L = { a: 'Seite a', b: 'Seite b', c: 'Hypotenuse c', alpha: 'Winkel α', beta: 'Winkel β' };
 
-    const L = {a:'Seite a', b:'Seite b', c:'Hypotenuse c', alpha:'Winkel α', beta:'Winkel β'};
-
-    for (const k of ['a','b','c']) {
+    for (const k of ['a', 'b', 'c']) {
         if (sol[k] != null) {
             if (isNaN(sol[k]) || sol[k] <= 0)
                 return `${L[k]}: Berechneter Wert ist ungültig. Bitte Eingaben prüfen.`;
@@ -563,87 +467,83 @@ function postValidate(sol) {
                      + `Bitte kleinere Eingabewerte verwenden.`;
         }
     }
-    for (const k of ['alpha','beta']) {
+    for (const k of ['alpha', 'beta']) {
         if (sol[k] != null && (isNaN(sol[k]) || sol[k] <= 0 || sol[k] >= 90))
-            return `${L[k]}: Berechneter Wert ${sol[k] != null ? fmt(sol[k])+'°' : '–'} liegt außerhalb `
+            return `${L[k]}: Berechneter Wert ${sol[k] != null ? fmt(sol[k]) + '°' : '–'} liegt außerhalb `
                  + `des gültigen Bereichs (0,01° – 89,99°). Bitte Eingaben prüfen.`;
     }
-
-    if (sol.a != null && sol.b != null && sol.c != null) {
-        if (sol.c < sol.a || sol.c < sol.b)
-            return `Widerspruch: Die berechnete Hypotenuse (${fmt(sol.c)} mm) ist kürzer als eine Kathete. `
-                 + `Das ist geometrisch unmöglich — bitte Eingaben prüfen.`;
-    }
+    if (sol.a != null && sol.b != null && sol.c != null && (sol.c < sol.a || sol.c < sol.b))
+        return `Widerspruch: Die berechnete Hypotenuse (${fmt(sol.c)} mm) ist kürzer als eine Kathete. `
+             + `Das ist geometrisch unmöglich — bitte Eingaben prüfen.`;
 
     return null;
 }
 
+// ============================================================
+// Solver
+// ============================================================
 function recalculate() {
     if (userFields.length < 2) { clearCalc(); hideResult(); updateStyles(); return; }
-
     const k1 = userFields[0], k2 = userFields[1];
     const v1 = readField(k1), v2 = readField(k2);
     if (v1 === null || v2 === null) { clearCalc(); hideResult(); updateStyles(); return; }
 
-    // Pre-validation
     const preErr = validate(k1, v1, k2, v2);
     if (preErr) { clearCalc(); showError(preErr); updateStyles(); return; }
 
     const known = {}; known[k1] = v1; known[k2] = v2;
     const sol = solve(known);
-
-    // Post-validation
     const postErr = postValidate(sol);
     if (postErr) { clearCalc(); showError(postErr); updateStyles(); return; }
 
-    const calcKeys = ['a','b','c','alpha','beta'].filter(k => !userFields.includes(k));
+    const calcKeys = ['a', 'b', 'c', 'alpha', 'beta'].filter(k => !userFields.includes(k));
     calcKeys.forEach(k => { els[k].value = sol[k] != null ? sol[k].toFixed(2) : ''; });
     updateStyles();
     displayResults(sol, calcKeys);
 }
 
 function solve(known) {
-    let {a,b,c,alpha,beta} = {
-        a:known.a??null, b:known.b??null, c:known.c??null,
-        alpha:known.alpha??null, beta:known.beta??null,
+    let { a, b, c, alpha, beta } = {
+        a: known.a ?? null, b: known.b ?? null, c: known.c ?? null,
+        alpha: known.alpha ?? null, beta: known.beta ?? null,
     };
     try {
-        if (alpha!=null && beta!=null && Math.abs(alpha+beta-90) > 0.1) return null;
-        if (alpha!=null && beta==null) beta=90-alpha;
-        if (beta!=null && alpha==null) alpha=90-beta;
-        const aR = alpha!=null ? alpha*DEG : null;
+        if (alpha != null && beta != null && Math.abs(alpha + beta - 90) > 0.1) return null;
+        if (alpha != null && beta == null) beta  = 90 - alpha;
+        if (beta  != null && alpha == null) alpha = 90 - beta;
+        const aR = alpha != null ? alpha * DEG : null;
 
-        if      (a!=null && b!=null) { c=Math.sqrt(a*a+b*b); if(!alpha) alpha=Math.atan2(a,b)*RAD; if(!beta) beta=90-alpha; }
-        else if (a!=null && c!=null) { b=Math.sqrt(c*c-a*a); if(!alpha) alpha=Math.asin(a/c)*RAD; if(!beta) beta=90-alpha; }
-        else if (b!=null && c!=null) { a=Math.sqrt(c*c-b*b); if(!alpha) alpha=Math.acos(b/c)*RAD; if(!beta) beta=90-alpha; }
-        else if (a!=null && aR!=null) { b=a/Math.tan(aR); c=a/Math.sin(aR); }
-        else if (b!=null && aR!=null) { a=b*Math.tan(aR); c=b/Math.cos(aR); }
-        else if (c!=null && aR!=null) { a=c*Math.sin(aR); b=c*Math.cos(aR); }
-        else if (alpha!=null && beta!=null) { return {a:null,b:null,c:null,alpha,beta}; }
+        if      (a != null && b != null) { c = Math.sqrt(a*a + b*b); if (!alpha) alpha = Math.atan2(a, b) * RAD; if (!beta) beta = 90 - alpha; }
+        else if (a != null && c != null) { b = Math.sqrt(c*c - a*a); if (!alpha) alpha = Math.asin(a / c) * RAD; if (!beta) beta = 90 - alpha; }
+        else if (b != null && c != null) { a = Math.sqrt(c*c - b*b); if (!alpha) alpha = Math.acos(b / c) * RAD; if (!beta) beta = 90 - alpha; }
+        else if (a != null && aR != null) { b = a / Math.tan(aR); c = a / Math.sin(aR); }
+        else if (b != null && aR != null) { a = b * Math.tan(aR); c = b / Math.cos(aR); }
+        else if (c != null && aR != null) { a = c * Math.sin(aR); b = c * Math.cos(aR); }
+        else if (alpha != null && beta != null) { return { a: null, b: null, c: null, alpha, beta }; }
         else return null;
 
-        return {a,b,c,alpha,beta};
-    } catch(e) { return null; }
+        return { a, b, c, alpha, beta };
+    } catch (e) { return null; }
 }
 
 // ============================================================
-// UI
+// UI Helpers
 // ============================================================
 function clearCalc() {
-    ['a','b','c','alpha','beta'].forEach(k => { if (!userFields.includes(k)) els[k].value = ''; });
+    ['a', 'b', 'c', 'alpha', 'beta'].forEach(k => { if (!userFields.includes(k)) els[k].value = ''; });
 }
 function updateStyles() {
-    ['a','b','c','alpha','beta'].forEach(k => {
-        els[k].classList.remove('user-input','calculated');
-        if (userFields.includes(k) && readField(k)!=null) els[k].classList.add('user-input');
+    ['a', 'b', 'c', 'alpha', 'beta'].forEach(k => {
+        els[k].classList.remove('user-input', 'calculated');
+        if (userFields.includes(k) && readField(k) != null) els[k].classList.add('user-input');
         else if (els[k].value !== '') els[k].classList.add('calculated');
     });
 }
 function displayResults(sol, calcKeys) {
-    const nm = {a:'Seite a',b:'Seite b',c:'Hypotenuse c',alpha:'Winkel α',beta:'Winkel β'};
-    const un = {a:' mm',b:' mm',c:' mm',alpha:'°',beta:'°'};
+    const nm = { a: 'Seite a', b: 'Seite b', c: 'Hypotenuse c', alpha: 'Winkel α', beta: 'Winkel β' };
+    const un = { a: ' mm', b: ' mm', c: ' mm', alpha: '°', beta: '°' };
     let h = '';
-    calcKeys.forEach(k => { if (sol[k]!=null) h += `${nm[k]} = ${sol[k].toFixed(2)}${un[k]}<br>`; });
+    calcKeys.forEach(k => { if (sol[k] != null) h += `${nm[k]} = ${sol[k].toFixed(2)}${un[k]}<br>`; });
     if (h) { document.getElementById('resultDetail').innerHTML = h; document.getElementById('result').classList.add('show'); }
     else hideResult();
 }
@@ -654,17 +554,17 @@ function showError(m) {
 function hideResult() { document.getElementById('result').classList.remove('show'); }
 function resetAll() {
     userFields = []; clearTimeout(debounceTimer);
-    Object.values(els).forEach(el => { el.value=''; el.classList.remove('user-input','calculated'); });
+    Object.values(els).forEach(el => { el.value = ''; el.classList.remove('user-input', 'calculated'); });
     hideResult();
 }
 
 // ============================================================
-// Events & Init
+// Init
 // ============================================================
-Object.entries(els).forEach(([key,el]) => {
+Object.entries(els).forEach(([key, el]) => {
     el.addEventListener('input', () => onFieldInput(key));
-    el.addEventListener('focus', function() {
-        if (this.classList.contains('calculated')) { this.value=''; this.classList.remove('calculated'); }
+    el.addEventListener('focus', function () {
+        if (this.classList.contains('calculated')) { this.value = ''; this.classList.remove('calculated'); }
     });
 });
 
