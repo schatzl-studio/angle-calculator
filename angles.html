@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Winkelrechner">
+    <meta name="copyright" content="© 2025, SCHATZL Fine Furniture">
+    <title>SCHATZL — Winkelrechner</title>
+    <link rel="preconnect" href="https://rsms.me/">
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+    <style>
+        :root {
+            font-family: Inter, sans-serif;
+            font-feature-settings: 'liga' 1, 'calt' 1;
+            --clr-bg: #fafaf8;
+            --clr-surface: #fff;
+            --clr-border: #d4d4d0;
+            --clr-text: #1a1a1a;
+            --clr-muted: #888;
+            --clr-user-bg: #dff0d8;
+            --clr-user-border: #5a9a4a;
+            --clr-calc-bg: #deedf6;
+            --clr-calc-border: #7badc4;
+            --clr-error: #c62828;
+            --clr-tri-stroke: #1a1a1a;
+        }
+        @supports (font-variation-settings: normal) {
+            :root { font-family: InterVariable, sans-serif; }
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            display: flex; flex-direction: column; align-items: center;
+            min-height: 100vh; min-height: 100dvh;
+            background: var(--clr-bg); padding: 24px 16px; color: var(--clr-text);
+        }
+
+        .container {
+            display: flex; flex-direction: column; align-items: center;
+            width: 100%; max-width: 480px;
+        }
+
+        /* ── Header row ── */
+        .header-row {
+            display: flex; align-items: center; justify-content: center;
+            width: 100%; position: relative; margin-bottom: 6px;
+        }
+        .logo { display: flex; align-items: center; }
+        .logo img { height: 26px; width: auto; }
+        .logo-text { font-weight: 700; font-size: 18px; letter-spacing: 0.1em; }
+
+        /* ── Language toggle ── */
+        .lang-toggle {
+            position: absolute; right: 0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .lang-label {
+            font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+            color: var(--clr-muted); text-transform: uppercase;
+            user-select: none; cursor: pointer; transition: color 0.2s;
+        }
+        .lang-label.active { color: var(--clr-text); }
+
+        /* pill switch */
+        .switch { position: relative; width: 36px; height: 20px; cursor: pointer; }
+        .switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+        .switch-track {
+            position: absolute; inset: 0;
+            background: var(--clr-border); border-radius: 10px; transition: background 0.2s;
+        }
+        .switch input:checked ~ .switch-track { background: var(--clr-text); }
+        .switch-thumb {
+            position: absolute; top: 3px; left: 3px;
+            width: 14px; height: 14px;
+            background: #fff; border-radius: 50%;
+            transition: transform 0.2s; pointer-events: none;
+        }
+        .switch input:checked ~ .switch-thumb { transform: translateX(16px); }
+
+        h1 {
+            font-weight: 600; font-size: 13px;
+            letter-spacing: 0.06em; text-transform: uppercase;
+            color: var(--clr-muted); margin-bottom: 20px;
+        }
+
+        .triangle-card {
+            background: var(--clr-surface); border: 1px solid var(--clr-border);
+            border-radius: 2px; padding: 10px 10px 16px; margin-bottom: 16px; width: 100%;
+        }
+        .triangle-wrapper { width: 100%; aspect-ratio: 4 / 3; }
+        svg { width: 100%; height: 100%; overflow: visible; }
+
+        .controls-row { display: flex; gap: 6px; margin-top: 12px; }
+        .control-btn {
+            flex: 1; padding: 8px 12px; background: var(--clr-surface);
+            border: 1px solid var(--clr-border); color: var(--clr-text);
+            cursor: pointer; font-size: 12px; font-family: inherit;
+            letter-spacing: 0.02em; border-radius: 2px;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .control-btn:hover { border-color: var(--clr-text); }
+        .control-btn:active { background: var(--clr-text); color: #fff; border-color: var(--clr-text); }
+
+        .inputs-card {
+            background: var(--clr-surface); border: 1px solid var(--clr-border);
+            border-radius: 2px; padding: 20px; margin-bottom: 16px; width: 100%;
+        }
+        .inputs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .input-column { display: flex; flex-direction: column; gap: 10px; }
+        .column-title {
+            font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--clr-muted); margin-bottom: 2px;
+        }
+        .input-row { display: flex; align-items: center; gap: 8px; }
+        .input-row label { font-size: 13px; min-width: 50px; font-weight: 500; }
+        .input-row input, .input-row .reset-btn {
+            width: 80px; height: 33px; padding: 0 8px;
+            border: 1px solid var(--clr-border); background: var(--clr-surface);
+            color: var(--clr-text); font-size: 13px; font-family: inherit;
+            text-align: center; border-radius: 2px;
+        }
+        .input-row input { transition: background 0.25s, border-color 0.25s; }
+        .input-row input:focus { outline: none; border-color: var(--clr-text); }
+        .input-row input.user-input { background: var(--clr-user-bg); border-color: var(--clr-user-border); }
+        .input-row input.calculated { background: var(--clr-calc-bg); border-color: var(--clr-calc-border); }
+        .input-row input::-webkit-inner-spin-button,
+        .input-row input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        .input-row input { -moz-appearance: textfield; }
+        .input-row .unit { font-size: 12px; color: var(--clr-muted); min-width: 20px; }
+
+        .reset-btn {
+            cursor: pointer; background: #000 !important;
+            border-color: #000 !important; color: #fff !important;
+            font-weight: 500; letter-spacing: 0.03em; transition: opacity 0.15s;
+        }
+        .reset-btn:hover { opacity: 0.8; }
+
+        .result-card {
+            background: var(--clr-surface); border: 1px solid var(--clr-border);
+            border-radius: 2px; padding: 16px 20px; width: 100%; display: none;
+        }
+        .result-card.show { display: block; }
+        .result-title {
+            font-weight: 600; font-size: 10px; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--clr-muted); margin-bottom: 8px;
+        }
+        .result-detail { font-size: 13px; line-height: 1.9; }
+        .result-detail .error { color: var(--clr-error); }
+
+        @media (max-width: 500px) {
+            body { padding: 12px 10px; }
+            .inputs-grid { grid-template-columns: 1fr; gap: 16px; }
+            .input-row label { min-width: 50px; font-size: 12px; }
+            .input-row input, .input-row .reset-btn { width: 70px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <div class="header-row">
+            <div class="logo">
+                <img src="https://schatzl.studio/logo.png" alt="SCHATZL"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='inline';">
+                <span class="logo-text" style="display:none;">SCHATZL</span>
+            </div>
+            <div class="lang-toggle">
+                <span class="lang-label active" id="labelDe">DE</span>
+                <label class="switch" title="Switch language / Sprache wechseln">
+                    <input type="checkbox" id="langSwitch">
+                    <span class="switch-track"></span>
+                    <span class="switch-thumb"></span>
+                </label>
+                <span class="lang-label" id="labelEn">EN</span>
+            </div>
+        </div>
+
+        <h1 data-i18n="title">Winkelrechner</h1>
+
+        <div class="triangle-card">
+            <div class="triangle-wrapper">
+                <svg id="triangleSvg" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid meet"></svg>
+            </div>
+            <div class="controls-row">
+                <button class="control-btn" onclick="mirrorTriangle()" data-i18n="btnMirror">↔ Spiegeln</button>
+                <button class="control-btn" onclick="rotateTriangle()" data-i18n="btnRotate">⟳ Rotieren</button>
+            </div>
+        </div>
+
+        <div class="inputs-card">
+            <div class="inputs-grid">
+                <div class="input-column">
+                    <div class="column-title" data-i18n="colSides">Seiten</div>
+                    <div class="input-row">
+                        <label>a</label>
+                        <input type="number" id="inputA" step="any" placeholder="a">
+                        <span class="unit">mm</span>
+                    </div>
+                    <div class="input-row">
+                        <label>b</label>
+                        <input type="number" id="inputB" step="any" placeholder="b">
+                        <span class="unit">mm</span>
+                    </div>
+                    <div class="input-row">
+                        <label>c</label>
+                        <input type="number" id="inputC" step="any" placeholder="c">
+                        <span class="unit">mm</span>
+                    </div>
+                </div>
+                <div class="input-column">
+                    <div class="column-title" data-i18n="colAngles">Winkel</div>
+                    <div class="input-row">
+                        <label>α</label>
+                        <input type="number" id="inputAlpha" step="any" min="0.01" max="89.99" placeholder="α">
+                        <span class="unit">°</span>
+                    </div>
+                    <div class="input-row">
+                        <label>β</label>
+                        <input type="number" id="inputBeta" step="any" min="0.01" max="89.99" placeholder="β">
+                        <span class="unit">°</span>
+                    </div>
+                    <div class="input-row">
+                        <label>&nbsp;</label>
+                        <button class="reset-btn" onclick="resetAll()" data-i18n="btnReset">Neu</button>
+                        <span class="unit">&nbsp;</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-card" id="result">
+            <div class="result-title" data-i18n="resultsTitle">Ergebnisse</div>
+            <div class="result-detail" id="resultDetail"></div>
+        </div>
+
+    </div>
+
+<script>
+/**
+ * SCHATZL Winkelrechner / Angle Calculator v1.1.0
+ * Rechtwinkliges Dreieck — Seiten- und Winkelberechnung
+ *
+ * Copyright (c) 2025, SCHATZL Fine Furniture — All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND. IN NO EVENT
+ * SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY.
+ */
+
+// ============================================================
+// Constants & State
+// ============================================================
+const DEG = Math.PI / 180;
+const RAD = 180 / Math.PI;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const VW = 400, VH = 300;
+const MAX_SIDE = 99999; // mm
+
+let lang = 'de';
+let T = null; // set by applyLang()
+
+let userFields = [];
+let debounceTimer = null;
+let rotation = 0;    // 0..3 → 0°/90°/180°/270° CW
+let mirrored = false;
+
+const els = {
+    a:     document.getElementById('inputA'),
+    b:     document.getElementById('inputB'),
+    c:     document.getElementById('inputC'),
+    alpha: document.getElementById('inputAlpha'),
+    beta:  document.getElementById('inputBeta'),
+};
+
+// ============================================================
+// Translations
+// ============================================================
+const TRANSLATIONS = {
+    de: {
+        // UI strings
+        title:        'Winkelrechner',
+        btnMirror:    '↔ Spiegeln',
+        btnRotate:    '⟳ Rotieren',
+        colSides:     'Seiten',
+        colAngles:    'Winkel',
+        btnReset:     'Neu',
+        resultsTitle: 'Ergebnisse',
+        // SVG diagram labels
+        sideA: 'a · Gegenkathete',
+        sideB: 'b · Ankathete',
+        sideC: 'c · Hypotenuse',
+        // Result field names
+        nameA:     'Seite a',
+        nameB:     'Seite b',
+        nameC:     'Hypotenuse c',
+        nameAlpha: 'Winkel α',
+        nameBeta:  'Winkel β',
+        // Validation messages
+        errSideZero:    (L, v) => `${L}: Wert muss größer als 0 sein (eingegeben: ${fmt(v)} mm).`,
+        errSideMax:     (L, v) => `${L}: Maximalwert ist ${fmt(MAX_SIDE)} mm (eingegeben: ${fmt(v)} mm).`,
+        errAngleZero:   (L, v) => `${L}: Wert muss größer als 0° sein (eingegeben: ${fmt(v)}°). Zulässig: 0,01° – 89,99°.`,
+        errAngleMax:    (L, v) => `${L}: Wert muss kleiner als 90° sein (eingegeben: ${fmt(v)}°). Zulässig: 0,01° – 89,99°.`,
+        errAngleSum:    (sum, diff, v1) =>
+            `α + β = ${fmt(sum)}° — muss exakt 90° ergeben (Differenz: ${fmt(diff)}°). ` +
+            `Bei α = ${fmt(v1)}° wäre β = ${fmt(90 - v1)}° erforderlich.`,
+        errHypLtA:      (c, a) =>
+            `Hypotenuse c (${fmt(c)} mm) muss größer sein als Seite a (${fmt(a)} mm). ` +
+            `Mindestwert für c: > ${fmt(a)} mm.`,
+        errHypLtB:      (c, b) =>
+            `Hypotenuse c (${fmt(c)} mm) muss größer sein als Seite b (${fmt(b)} mm). ` +
+            `Mindestwert für c: > ${fmt(b)} mm.`,
+        errOverMax:     (Ls, sv, La, av, est) =>
+            `Kombination ergibt Seitenlängen über ${fmt(MAX_SIDE)} mm. ` +
+            `Bei ${Ls} = ${fmt(sv)} mm und ${La} = ${fmt(av)}° ` +
+            `wird die Hypotenuse ca. ${fmt(est)} mm. Bitte Werte verringern.`,
+        errNoSolution:  () => 'Berechnung nicht möglich — die Kombination der Eingabewerte ergibt kein gültiges rechtwinkliges Dreieck.',
+        errSideInvalid: (L) => `${L}: Berechneter Wert ist ungültig. Bitte Eingaben prüfen.`,
+        errSideCalcMax: (L, v) =>
+            `${L}: Berechneter Wert ${fmt(v)} mm überschreitet das Maximum von ${fmt(MAX_SIDE)} mm. ` +
+            `Bitte kleinere Eingabewerte verwenden.`,
+        errAngleRange:  (L, v) =>
+            `${L}: Berechneter Wert ${v != null ? fmt(v) + '°' : '–'} liegt außerhalb ` +
+            `des gültigen Bereichs (0,01° – 89,99°). Bitte Eingaben prüfen.`,
+        errHypContradiction: (c) =>
+            `Widerspruch: Die berechnete Hypotenuse (${fmt(c)} mm) ist kürzer als eine Kathete. ` +
+            `Das ist geometrisch unmöglich — bitte Eingaben prüfen.`,
+    },
+
+    en: {
+        // UI strings
+        title:        'Angle Calculator',
+        btnMirror:    '↔ Mirror',
+        btnRotate:    '⟳ Rotate',
+        colSides:     'Sides',
+        colAngles:    'Angles',
+        btnReset:     'Reset',
+        resultsTitle: 'Results',
+        // SVG diagram labels
+        sideA: 'a · Opposite',
+        sideB: 'b · Adjacent',
+        sideC: 'c · Hypotenuse',
+        // Result field names
+        nameA:     'Side a',
+        nameB:     'Side b',
+        nameC:     'Hypotenuse c',
+        nameAlpha: 'Angle α',
+        nameBeta:  'Angle β',
+        // Validation messages
+        errSideZero:    (L, v) => `${L}: Value must be greater than 0 (entered: ${fmt(v)} mm).`,
+        errSideMax:     (L, v) => `${L}: Maximum value is ${fmt(MAX_SIDE)} mm (entered: ${fmt(v)} mm).`,
+        errAngleZero:   (L, v) => `${L}: Value must be greater than 0° (entered: ${fmt(v)}°). Valid range: 0.01° – 89.99°.`,
+        errAngleMax:    (L, v) => `${L}: Value must be less than 90° (entered: ${fmt(v)}°). Valid range: 0.01° – 89.99°.`,
+        errAngleSum:    (sum, diff, v1) =>
+            `α + β = ${fmt(sum)}° — must equal exactly 90° (difference: ${fmt(diff)}°). ` +
+            `With α = ${fmt(v1)}°, β would need to be ${fmt(90 - v1)}°.`,
+        errHypLtA:      (c, a) =>
+            `Hypotenuse c (${fmt(c)} mm) must be greater than side a (${fmt(a)} mm). ` +
+            `Minimum value for c: > ${fmt(a)} mm.`,
+        errHypLtB:      (c, b) =>
+            `Hypotenuse c (${fmt(c)} mm) must be greater than side b (${fmt(b)} mm). ` +
+            `Minimum value for c: > ${fmt(b)} mm.`,
+        errOverMax:     (Ls, sv, La, av, est) =>
+            `Combination results in side lengths exceeding ${fmt(MAX_SIDE)} mm. ` +
+            `With ${Ls} = ${fmt(sv)} mm and ${La} = ${fmt(av)}°, ` +
+            `the hypotenuse would be approx. ${fmt(est)} mm. Please reduce values.`,
+        errNoSolution:  () => 'Calculation not possible — the combination of inputs does not form a valid right triangle.',
+        errSideInvalid: (L) => `${L}: Calculated value is invalid. Please check your inputs.`,
+        errSideCalcMax: (L, v) =>
+            `${L}: Calculated value ${fmt(v)} mm exceeds the maximum of ${fmt(MAX_SIDE)} mm. ` +
+            `Please use smaller input values.`,
+        errAngleRange:  (L, v) =>
+            `${L}: Calculated value ${v != null ? fmt(v) + '°' : '–'} is outside ` +
+            `the valid range (0.01° – 89.99°). Please check your inputs.`,
+        errHypContradiction: (c) =>
+            `Contradiction: The calculated hypotenuse (${fmt(c)} mm) is shorter than a leg. ` +
+            `This is geometrically impossible — please check your inputs.`,
+    },
+};
+
+// ============================================================
+// i18n helpers
+// ============================================================
+function fmt(v) {
+    return v.toLocaleString(lang === 'de' ? 'de-DE' : 'en-US', { maximumFractionDigits: 2 });
+}
+
+function fieldLabel(k) {
+    return { a: T.nameA, b: T.nameB, c: T.nameC, alpha: T.nameAlpha, beta: T.nameBeta }[k];
+}
+
+function applyLang() {
+    T = TRANSLATIONS[lang];
+    document.documentElement.lang = lang;
+    document.title = `SCHATZL — ${T.title}`;
+
+    // Update all marked text nodes
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.dataset.i18n;
+        if (T[key] !== undefined) el.textContent = T[key];
+    });
+
+    // Toggle label highlights
+    document.getElementById('labelDe').classList.toggle('active', lang === 'de');
+    document.getElementById('labelEn').classList.toggle('active', lang === 'en');
+
+    // Redraw SVG with translated side labels
+    drawTriangle();
+
+    // Re-render any visible result in new language
+    if (document.getElementById('result').classList.contains('show')) {
+        recalculate();
+    }
+}
+
+// ============================================================
+// Language switch wiring
+// ============================================================
+document.getElementById('langSwitch').addEventListener('change', function () {
+    lang = this.checked ? 'en' : 'de';
+    applyLang();
+});
+document.getElementById('labelDe').addEventListener('click', () => {
+    lang = 'de';
+    document.getElementById('langSwitch').checked = false;
+    applyLang();
+});
+document.getElementById('labelEn').addEventListener('click', () => {
+    lang = 'en';
+    document.getElementById('langSwitch').checked = true;
+    applyLang();
+});
+
+// ============================================================
+// Geometry
+// Right triangle with γ=90° at C.
+//   C = top-left  (90°),  A = bottom-left (α),  B = top-right (β)
+//   side a (Gegenkathete / Opposite) = C–B (horizontal)
+//   side b (Ankathete / Adjacent)    = C–A (vertical)
+//   side c (Hypotenuse)              = A–B (diagonal)
+// ============================================================
+function getBaseCorners() {
+    const pad = 65;
+    const maxW = VW - 2 * pad;
+    const maxH = VH - 2 * pad;
+    const scale = Math.min(maxW / 1, maxH / Math.sqrt(3));
+    const w = scale;
+    const h = Math.sqrt(3) * scale;
+    const ox = pad + (maxW - w) / 2;
+    const oy = pad + (maxH - h) / 2;
+    return {
+        C: [ox,     oy],
+        A: [ox,     oy + h],
+        B: [ox + w, oy],
+    };
+}
+
+function applyTransform(pt) {
+    let [x, y] = pt;
+    const cx = VW / 2, cy = VH / 2;
+    if (mirrored) x = 2 * cx - x;
+    for (let i = 0; i < rotation; i++) {
+        const dx = x - cx, dy = y - cy;
+        x = cx + dy;
+        y = cy - dx;
+    }
+    return [x, y];
+}
+
+// ============================================================
+// SVG Drawing
+// ============================================================
+function svgEl(parent, tag, attrs) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, String(v));
+    parent.appendChild(el);
+    return el;
+}
+
+function vNorm(dx, dy) {
+    const l = Math.hypot(dx, dy);
+    return l > 0 ? [dx / l, dy / l] : [0, 0];
+}
+
+function drawTriangle() {
+    const svg = document.getElementById('triangleSvg');
+    svg.innerHTML = '';
+    const base = getBaseCorners();
+    const C = applyTransform(base.C);
+    const A = applyTransform(base.A);
+    const B = applyTransform(base.B);
+    const centroid = [(C[0] + A[0] + B[0]) / 3, (C[1] + A[1] + B[1]) / 3];
+
+    svgEl(svg, 'polygon', {
+        points: `${C[0]},${C[1]} ${A[0]},${A[1]} ${B[0]},${B[1]}`,
+        fill: 'none', stroke: 'var(--clr-tri-stroke)',
+        'stroke-width': '1.5', 'stroke-linejoin': 'round',
+    });
+
+    drawRightAngle(svg, C, A, B);
+    drawAngleArc(svg, A, B, C, 'α');
+    drawAngleArc(svg, B, A, C, 'β');
+    drawSideLabel(svg, C, B, T.sideA, centroid);
+    drawSideLabel(svg, C, A, T.sideB, centroid);
+    drawSideLabel(svg, A, B, T.sideC, centroid);
+}
+
+function drawRightAngle(svg, C, A, B) {
+    const r = 14;
+    const dA = vNorm(A[0] - C[0], A[1] - C[1]);
+    const dB = vNorm(B[0] - C[0], B[1] - C[1]);
+    const start = [C[0] + dA[0] * r, C[1] + dA[1] * r];
+    const end   = [C[0] + dB[0] * r, C[1] + dB[1] * r];
+    const sweep = (dA[0] * dB[1] - dA[1] * dB[0]) > 0 ? 1 : 0;
+    svgEl(svg, 'path', {
+        d: `M ${start[0]},${start[1]} A ${r},${r} 0 0,${sweep} ${end[0]},${end[1]}`,
+        fill: 'none', stroke: 'var(--clr-tri-stroke)', 'stroke-width': '1',
+    });
+    const mid = vNorm(dA[0] + dB[0], dA[1] + dB[1]);
+    svgEl(svg, 'circle', {
+        cx: C[0] + mid[0] * r * 0.55, cy: C[1] + mid[1] * r * 0.55,
+        r: '1.5', fill: 'var(--clr-tri-stroke)',
+    });
+}
+
+function drawAngleArc(svg, V, P1, P2, label) {
+    const r = 28;
+    const d1 = vNorm(P1[0] - V[0], P1[1] - V[1]);
+    const d2 = vNorm(P2[0] - V[0], P2[1] - V[1]);
+    const s = [V[0] + d1[0] * r, V[1] + d1[1] * r];
+    const e = [V[0] + d2[0] * r, V[1] + d2[1] * r];
+    const cross = d1[0] * d2[1] - d1[1] * d2[0];
+    svgEl(svg, 'path', {
+        d: `M ${s[0]},${s[1]} A ${r},${r} 0 0,${cross > 0 ? 1 : 0} ${e[0]},${e[1]}`,
+        fill: 'none', stroke: 'var(--clr-tri-stroke)', 'stroke-width': '1',
+    });
+    const mid = vNorm((d1[0] + d2[0]) / 2, (d1[1] + d2[1]) / 2);
+    const lr = r + 13;
+    svgEl(svg, 'text', {
+        x: V[0] + mid[0] * lr, y: V[1] + mid[1] * lr,
+        'text-anchor': 'middle', 'dominant-baseline': 'central',
+        'font-size': '13', fill: 'var(--clr-text)',
+    }).textContent = label;
+}
+
+function drawSideLabel(svg, P1, P2, label, centroid) {
+    const mx = (P1[0] + P2[0]) / 2, my = (P1[1] + P2[1]) / 2;
+    const dx = P2[0] - P1[0], dy = P2[1] - P1[1];
+    const len = Math.hypot(dx, dy);
+    let nx = -dy / len, ny = dx / len;
+    const toC = [centroid[0] - mx, centroid[1] - my];
+    if (nx * toC[0] + ny * toC[1] > 0) { nx = -nx; ny = -ny; }
+    const off = 22;
+    const lx = mx + nx * off, ly = my + ny * off;
+    let angle = Math.atan2(dy, dx) * RAD;
+    if (angle > 90)  angle -= 180;
+    if (angle < -90) angle += 180;
+    svgEl(svg, 'text', {
+        x: lx, y: ly,
+        'text-anchor': 'middle', 'dominant-baseline': 'central',
+        'font-size': '10.5', 'font-weight': '500', fill: 'var(--clr-text)',
+        transform: `rotate(${angle.toFixed(2)} ${lx.toFixed(2)} ${ly.toFixed(2)})`,
+    }).textContent = label;
+}
+
+// ============================================================
+// Controls
+// ============================================================
+function mirrorTriangle() { mirrored = !mirrored; drawTriangle(); }
+function rotateTriangle() { rotation = (rotation + 1) % 4; drawTriangle(); }
+
+// ============================================================
+// Input Handling
+// ============================================================
+function trackField(key) {
+    userFields = userFields.filter(k => k !== key);
+    userFields.push(key);
+    if (userFields.length > 2) userFields.shift();
+}
+
+function readField(key) {
+    const v = parseFloat(els[key].value);
+    return (!isNaN(v) && v > 0) ? v : null;
+}
+
+function onFieldInput(changedKey) {
+    const val = readField(changedKey);
+    if (val !== null) trackField(changedKey);
+    else userFields = userFields.filter(k => k !== changedKey);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(recalculate, 500);
+}
+
+// ============================================================
+// Validation
+// ============================================================
+function validate(k1, v1, k2, v2) {
+    const sides  = ['a', 'b', 'c'];
+    const angles = ['alpha', 'beta'];
+
+    for (const [k, v] of [[k1, v1], [k2, v2]]) {
+        const L = fieldLabel(k);
+        if (sides.includes(k)) {
+            if (v <= 0)       return T.errSideZero(L, v);
+            if (v > MAX_SIDE) return T.errSideMax(L, v);
+        }
+        if (angles.includes(k)) {
+            if (v <= 0)  return T.errAngleZero(L, v);
+            if (v >= 90) return T.errAngleMax(L, v);
+        }
+    }
+
+    if (angles.includes(k1) && angles.includes(k2)) {
+        const sum = v1 + v2;
+        if (Math.abs(sum - 90) > 0.1)
+            return T.errAngleSum(sum, Math.abs(90 - sum), v1);
+    }
+
+    const vals = {}; vals[k1] = v1; vals[k2] = v2;
+    if (vals.c != null && vals.a != null && vals.c <= vals.a) return T.errHypLtA(vals.c, vals.a);
+    if (vals.c != null && vals.b != null && vals.c <= vals.b) return T.errHypLtB(vals.c, vals.b);
+
+    if (sides.includes(k1) !== sides.includes(k2)) {
+        const sKey = sides.includes(k1) ? k1 : k2;
+        const aKey = sides.includes(k1) ? k2 : k1;
+        const sVal = sides.includes(k1) ? v1 : v2;
+        const aVal = sides.includes(k1) ? v2 : v1;
+        let estMax = null;
+        if (sKey === 'a' && aKey === 'alpha') estMax = sVal / Math.sin(aVal * DEG);
+        if (sKey === 'b' && aKey === 'alpha') estMax = sVal / Math.cos(aVal * DEG);
+        if (sKey === 'a' && aKey === 'beta')  estMax = sVal / Math.cos(aVal * DEG);
+        if (sKey === 'b' && aKey === 'beta')  estMax = sVal / Math.sin(aVal * DEG);
+        if (sKey === 'c') estMax = sVal;
+        if (estMax != null && estMax > MAX_SIDE)
+            return T.errOverMax(fieldLabel(sKey), sVal, fieldLabel(aKey), aVal, estMax);
+    }
+
+    return null;
+}
+
+function postValidate(sol) {
+    if (!sol) return T.errNoSolution();
+
+    for (const k of ['a', 'b', 'c']) {
+        if (sol[k] != null) {
+            if (isNaN(sol[k]) || sol[k] <= 0) return T.errSideInvalid(fieldLabel(k));
+            if (sol[k] > MAX_SIDE)             return T.errSideCalcMax(fieldLabel(k), sol[k]);
+        }
+    }
+    for (const k of ['alpha', 'beta']) {
+        if (sol[k] != null && (isNaN(sol[k]) || sol[k] <= 0 || sol[k] >= 90))
+            return T.errAngleRange(fieldLabel(k), sol[k]);
+    }
+    if (sol.a != null && sol.b != null && sol.c != null && (sol.c < sol.a || sol.c < sol.b))
+        return T.errHypContradiction(sol.c);
+
+    return null;
+}
+
+// ============================================================
+// Solver
+// ============================================================
+function recalculate() {
+    if (userFields.length < 2) { clearCalc(); hideResult(); updateStyles(); return; }
+    const k1 = userFields[0], k2 = userFields[1];
+    const v1 = readField(k1), v2 = readField(k2);
+    if (v1 === null || v2 === null) { clearCalc(); hideResult(); updateStyles(); return; }
+
+    const preErr = validate(k1, v1, k2, v2);
+    if (preErr) { clearCalc(); showError(preErr); updateStyles(); return; }
+
+    const known = {}; known[k1] = v1; known[k2] = v2;
+    const sol = solve(known);
+    const postErr = postValidate(sol);
+    if (postErr) { clearCalc(); showError(postErr); updateStyles(); return; }
+
+    const calcKeys = ['a', 'b', 'c', 'alpha', 'beta'].filter(k => !userFields.includes(k));
+    calcKeys.forEach(k => { els[k].value = sol[k] != null ? sol[k].toFixed(2) : ''; });
+    updateStyles();
+    displayResults(sol, calcKeys);
+}
+
+function solve(known) {
+    let { a, b, c, alpha, beta } = {
+        a: known.a ?? null, b: known.b ?? null, c: known.c ?? null,
+        alpha: known.alpha ?? null, beta: known.beta ?? null,
+    };
+    try {
+        if (alpha != null && beta != null && Math.abs(alpha + beta - 90) > 0.1) return null;
+        if (alpha != null && beta == null)  beta  = 90 - alpha;
+        if (beta  != null && alpha == null) alpha = 90 - beta;
+        const aR = alpha != null ? alpha * DEG : null;
+
+        if      (a != null && b != null) { c = Math.sqrt(a*a + b*b); if (!alpha) alpha = Math.atan2(a, b) * RAD; if (!beta) beta = 90 - alpha; }
+        else if (a != null && c != null) { b = Math.sqrt(c*c - a*a); if (!alpha) alpha = Math.asin(a / c) * RAD; if (!beta) beta = 90 - alpha; }
+        else if (b != null && c != null) { a = Math.sqrt(c*c - b*b); if (!alpha) alpha = Math.acos(b / c) * RAD; if (!beta) beta = 90 - alpha; }
+        else if (a != null && aR != null) { b = a / Math.tan(aR); c = a / Math.sin(aR); }
+        else if (b != null && aR != null) { a = b * Math.tan(aR); c = b / Math.cos(aR); }
+        else if (c != null && aR != null) { a = c * Math.sin(aR); b = c * Math.cos(aR); }
+        else if (alpha != null && beta != null) { return { a: null, b: null, c: null, alpha, beta }; }
+        else return null;
+
+        return { a, b, c, alpha, beta };
+    } catch (e) { return null; }
+}
+
+// ============================================================
+// UI Helpers
+// ============================================================
+function clearCalc() {
+    ['a', 'b', 'c', 'alpha', 'beta'].forEach(k => { if (!userFields.includes(k)) els[k].value = ''; });
+}
+function updateStyles() {
+    ['a', 'b', 'c', 'alpha', 'beta'].forEach(k => {
+        els[k].classList.remove('user-input', 'calculated');
+        if (userFields.includes(k) && readField(k) != null) els[k].classList.add('user-input');
+        else if (els[k].value !== '') els[k].classList.add('calculated');
+    });
+}
+function displayResults(sol, calcKeys) {
+    const nm = { a: T.nameA, b: T.nameB, c: T.nameC, alpha: T.nameAlpha, beta: T.nameBeta };
+    const un = { a: ' mm', b: ' mm', c: ' mm', alpha: '°', beta: '°' };
+    let h = '';
+    calcKeys.forEach(k => { if (sol[k] != null) h += `${nm[k]} = ${sol[k].toFixed(2)}${un[k]}<br>`; });
+    if (h) { document.getElementById('resultDetail').innerHTML = h; document.getElementById('result').classList.add('show'); }
+    else hideResult();
+}
+function showError(m) {
+    document.getElementById('resultDetail').innerHTML = `<span class="error">${m}</span>`;
+    document.getElementById('result').classList.add('show');
+}
+function hideResult() { document.getElementById('result').classList.remove('show'); }
+function resetAll() {
+    userFields = []; clearTimeout(debounceTimer);
+    Object.values(els).forEach(el => { el.value = ''; el.classList.remove('user-input', 'calculated'); });
+    hideResult();
+}
+
+// ============================================================
+// Init
+// ============================================================
+Object.entries(els).forEach(([key, el]) => {
+    el.addEventListener('input', () => onFieldInput(key));
+    el.addEventListener('focus', function () {
+        if (this.classList.contains('calculated')) { this.value = ''; this.classList.remove('calculated'); }
+    });
+});
+
+applyLang(); // sets T, draws triangle, default = 'de'
+</script>
+</body>
+</html>
