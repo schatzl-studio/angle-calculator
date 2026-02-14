@@ -20,21 +20,21 @@ Enter any two known values (sides or angles) and all remaining values are comput
 
 Open `angles.html` directly in any modern browser — no server required.
 
-1. Enter any two values in the **Sides / Seiten** and **Angles / Winkel** columns
+1. Enter any two values in the **Seiten / Sides** and **Winkel / Angles** columns
 2. The remaining three values appear automatically after a short debounce
-3. Use **↔ Mirror / Spiegeln** and **⟳ Rotate / Rotieren** to reorient the diagram
-4. Press **Reset / Neu** to clear all fields and start over
-5. Toggle the **DE · EN** switch in the top-right corner to switch language
+3. Use **↔ Spiegeln / Mirror** and **⟳ Rotieren / Rotate** to reorient the diagram
+4. Press **Neu / Reset** to clear all fields and start over
+5. Toggle the **DE · EN** switch in the top-right corner to change language
 
 ### Input reference
 
-| Field | DE             | EN         | Unit | Range         |
-|-------|----------------|------------|------|---------------|
-| a     | Gegenkathete   | Opposite   | mm   | > 0, ≤ 99 999 |
-| b     | Ankathete      | Adjacent   | mm   | > 0, ≤ 99 999 |
-| c     | Hypotenuse     | Hypotenuse | mm   | > 0, ≤ 99 999 |
-| α     | Winkel α       | Angle α    | °    | 0.01 – 89.99  |
-| β     | Winkel β       | Angle β    | °    | 0.01 – 89.99  |
+| Field | DE           | EN         | Unit | Range         |
+|-------|--------------|------------|------|---------------|
+| a     | Gegenkathete | Opposite   | mm   | > 0, ≤ 99 999 |
+| b     | Ankathete    | Adjacent   | mm   | > 0, ≤ 99 999 |
+| c     | Hypotenuse   | Hypotenuse | mm   | > 0, ≤ 99 999 |
+| α     | Winkel α     | Angle α    | °    | 0.01 – 89.99  |
+| β     | Winkel β     | Angle β    | °    | 0.01 – 89.99  |
 
 The right angle γ = 90° is always fixed at vertex C.
 
@@ -60,14 +60,15 @@ Any evergreen browser (Chrome, Firefox, Safari, Edge) with JavaScript.
 
 ## License
 
-Copyright © 2025 SCHATZL Fine Furniture. All rites reversed.
+MIT License
 
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+Copyright (c) 2025 SCHATZL Fine Furniture
 
-1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-This software is provided "as is" without warranty of any kind. In no event shall the copyright holder be liable for any claim, damages or other liability arising from the use of this software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL SCHATZL FINE FURNITURE BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ---
 
