@@ -40,5 +40,4 @@ No installation required.
 
 ## License
 
-Copyright © 2025, SCHATZL Fine Furniture
-Use according to the license included in the source code.
+Copyright © 2025, SCHATZL Fine Furniture. Use according to the license included in the source code.
